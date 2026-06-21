@@ -17,7 +17,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <!-- Module output → ../.build/modules/<ProjectName>/ (matches modsharp-deploy expectations) -->
+  <!-- Module output → .build/modules/<ProjectName>/ under the repo root (matches modsharp-deploy expectations) -->
   <PropertyGroup>
     <OutputPath>$(MSBuildThisFileDirectory).build\modules\$(MSBuildProjectName)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
