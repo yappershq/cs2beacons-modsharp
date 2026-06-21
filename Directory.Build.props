@@ -32,13 +32,7 @@
   <!-- ModSharp API surface (compile-time only — runtime is provided by the server) -->
   <ItemGroup>
     <PackageReference Include="ModSharp.Sharp.Shared" Version="2.1.132" ExcludeAssets="runtime" />
-  </ItemGroup>
-
-  <!-- AdminManager Shared API. Private=false → NOT copied to build output; the
-       server already ships this DLL. We only need it to compile against. -->
-  <ItemGroup>
-    <Reference Include="Sharp.Modules.AdminManager.Shared" Private="false">
-      <HintPath>$(MSBuildThisFileDirectory)refs\Sharp.Modules.AdminManager.Shared.dll</HintPath>
-    </Reference>
+    <!-- AdminManager Shared API via NuGet; ExcludeAssets="runtime" → server already ships this DLL. -->
+    <PackageReference Include="ModSharp.Sharp.Modules.AdminManager.Shared" Version="2.1.132" ExcludeAssets="runtime" />
   </ItemGroup>
 </Project>
