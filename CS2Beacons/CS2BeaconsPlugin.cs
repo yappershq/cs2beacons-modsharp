@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Sharp.Modules.AdminManager.Shared;
+using Sharp.Modules.LocalizerManager.Shared;
 using Sharp.Shared;
 using Sharp.Shared.Enums;
 using Sharp.Shared.GameEntities;
@@ -37,6 +37,16 @@ internal sealed class CS2BeaconsPlugin
 
     private const string ModuleIdentity = nameof(CS2Beacons);
 
+    /// <summary>Locale file name (without extension) under <c>{sharp}/locales/</c>.</summary>
+    private const string LocaleName = "cs2beacons";
+
+    // Locale keys (declared in .assets/locales/cs2beacons.json).
+    private const string KeyUsage           = "Beacon_Usage";
+    private const string KeyTargetsEmpty    = "Beacon_TargetsEmpty";
+    private const string KeyMultipleTargets = "Beacon_MultipleTargets";
+    private const string KeyNoPermission    = "Beacon_NoPermission";
+    private const string KeyToggled         = "Beacon_Toggled";
+
     private readonly ILogger<CS2BeaconsPlugin> _logger;
     private readonly IModSharp                 _modSharp;
     private readonly IClientManager            _clientManager;
@@ -47,7 +57,8 @@ internal sealed class CS2BeaconsPlugin
 
     private CS2BeaconsConfig _config = new();
 
-    private IAdminManager? _adminManager;
+    private IAdminManager?     _adminManager;
+    private ILocalizerManager? _localizer;
 
     /// <summary>Per-slot particle entity index. <see cref="EntityIndex.InvalidIndex" /> = no beacon.</summary>
     private readonly EntityIndex[] _beacons = new EntityIndex[64];
@@ -98,9 +109,22 @@ internal sealed class CS2BeaconsPlugin
 
     public void OnAllModulesLoaded()
     {
-        // Resolve AdminManager here — publishers finish PostInit before any OAM fires.
+        // Resolve AdminManager + LocalizerManager here — publishers finish PostInit before any OAM fires.
         _adminManager = _sharpModuleManager
             .GetOptionalSharpModuleInterface<IAdminManager>(IAdminManager.Identity)?.Instance;
+
+        _localizer = _sharpModuleManager
+            .GetOptionalSharpModuleInterface<ILocalizerManager>(ILocalizerManager.Identity)?.Instance;
+
+        if (_localizer is null)
+        {
+            _logger.LogWarning(
+                "LocalizerManager not found — beacon messages will fall back to plain text. Is the LocalizerManager module loaded?");
+        }
+        else
+        {
+            _localizer.LoadLocaleFile(LocaleName, suppressDuplicationWarnings: true);
+        }
 
         if (_adminManager is null)
         {
@@ -125,8 +149,41 @@ internal sealed class CS2BeaconsPlugin
         _logger.LogInformation("CS2Beacons module loaded");
     }
 
-    public void OnLibraryConnected(string name) { }
-    public void OnLibraryDisconnect(string name) { }
+    public void OnLibraryConnected(string name)
+    {
+        if (name != ILocalizerManager.Identity && name != "LocalizerManager")
+            return;
+
+        _localizer = _sharpModuleManager
+            .GetOptionalSharpModuleInterface<ILocalizerManager>(ILocalizerManager.Identity)?.Instance;
+
+        _localizer?.LoadLocaleFile(LocaleName, suppressDuplicationWarnings: true);
+    }
+
+    public void OnLibraryDisconnect(string name)
+    {
+        if (name == ILocalizerManager.Identity || name == "LocalizerManager")
+            _localizer = null;
+    }
+
+    /// <summary>
+    ///     Sends a localized, color-processed line to a single client's chat.
+    ///     Falls back to the raw key when LocalizerManager is unavailable.
+    /// </summary>
+    private void PrintLocalized(IGameClient client, string key, params object?[] args)
+    {
+        if (_localizer is not { } mgr)
+        {
+            client.Print(HudPrintChannel.Chat, key);
+            return;
+        }
+
+        mgr.For(client)
+            .Localized(key, args)
+            .Prefix(null)
+            .Transform(ChatFormat.ProcessColorCodes)
+            .Print();
+    }
 
     public void Shutdown()
     {
@@ -234,14 +291,14 @@ internal sealed class CS2BeaconsPlugin
 
         if (!HasPermission(client))
         {
-            client.ConsolePrint(_config.BeaconNoPermissionMsg);
+            PrintLocalized(client, KeyNoPermission);
             return ECommandAction.Stopped;
         }
 
         // ArgCount excludes the command name; need at least one argument.
         if (command.ArgCount < 1)
         {
-            client.ConsolePrint(_config.BeaconUsage);
+            PrintLocalized(client, KeyUsage);
             return ECommandAction.Stopped;
         }
 
@@ -250,14 +307,14 @@ internal sealed class CS2BeaconsPlugin
 
         if (targets.Count == 0)
         {
-            client.ConsolePrint(_config.BeaconTargetsEmptyMsg);
+            PrintLocalized(client, KeyTargetsEmpty);
             return ECommandAction.Stopped;
         }
 
         // Partial-name matches must be unambiguous; @-selectors may hit many.
         if (!arg.StartsWith('@') && targets.Count != 1)
         {
-            client.ConsolePrint(_config.BeaconMultipleTargets);
+            PrintLocalized(client, KeyMultipleTargets);
             return ECommandAction.Stopped;
         }
 
@@ -320,33 +377,43 @@ internal sealed class CS2BeaconsPlugin
             return; // not alive / no pawn — don't broadcast a toggle that didn't happen
         }
 
-        SendToggleMessage(string.Format(CultureInfo.InvariantCulture,
-            _config.BeaconToggleMessage, player.Name.Trim()), caller);
+        SendToggleMessage(player.Name.Trim(), caller);
     }
 
     public bool HasActiveBeacon(IGameClient player)
         => _beacons[(int)player.Slot.AsPrimitive()] != EntityIndex.InvalidIndex;
 
-    private void SendToggleMessage(string message, IGameClient? caller)
+    /// <summary>
+    ///     Broadcasts the localized "beacon toggled" message per configured visibility,
+    ///     rendering each recipient in their own Steam culture. <paramref name="targetName" />
+    ///     is the player the beacon was toggled on. Falls back to a plain string if the
+    ///     LocalizerManager is unavailable.
+    /// </summary>
+    private void SendToggleMessage(string targetName, IGameClient? caller)
     {
         switch (_config.BeaconToggleVisibility.ToLowerInvariant())
         {
             case "everyone":
-                _modSharp.PrintToChatAll(message);
+                foreach (var c in _clientManager.GetGameClients(true))
+                {
+                    if (c.IsInGame)
+                        PrintLocalized(c, KeyToggled, targetName);
+                }
+
                 break;
 
             case "admins":
                 foreach (var c in _clientManager.GetGameClients(true))
                 {
-                    if (HasPermission(c))
-                        c.Print(HudPrintChannel.Chat, message);
+                    if (c.IsInGame && HasPermission(c))
+                        PrintLocalized(c, KeyToggled, targetName);
                 }
 
                 break;
 
             case "caller":
                 if (caller is { IsInGame: true })
-                    caller.Print(HudPrintChannel.Chat, message);
+                    PrintLocalized(caller, KeyToggled, targetName);
 
                 break;
         }

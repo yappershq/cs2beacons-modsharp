@@ -36,21 +36,9 @@ public sealed class CS2BeaconsConfig
     [JsonPropertyName("BeaconSpawnHeight")]
     public float BeaconSpawnHeight { get; set; } = 10f;
 
-    [JsonPropertyName("BeaconUsage")]
-    public string BeaconUsage { get; set; } = "Usage: beacon <name or @target>";
-
-    [JsonPropertyName("BeaconTargetsEmptyMsg")]
-    public string BeaconTargetsEmptyMsg { get; set; } = "Could not find any targets.";
-
-    [JsonPropertyName("BeaconMultipleTargets")]
-    public string BeaconMultipleTargets { get; set; } = "Found multiple targets, be more specific.";
-
-    [JsonPropertyName("BeaconNoPermissionMsg")]
-    public string BeaconNoPermissionMsg { get; set; } = "You don't have permission to use this command.";
-
-    /// <summary>Message broadcast when a beacon is toggled. {0} = player name.</summary>
-    [JsonPropertyName("BeaconToggleMessage")]
-    public string BeaconToggleMessage { get; set; } = "Beacon toggled on {0}";
+    // User-facing strings (usage / no-permission / targets-empty / multiple-targets /
+    // toggle broadcast) now live in .assets/locales/cs2beacons.json and are served via
+    // the ILocalizerManager (per-client culture). They were removed from this config.
 
     /// <summary>Who sees the toggle message: "everyone", "admins", or "caller".</summary>
     [JsonPropertyName("BeaconToggleVisibility")]

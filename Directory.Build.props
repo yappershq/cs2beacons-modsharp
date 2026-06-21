@@ -34,5 +34,7 @@
     <PackageReference Include="ModSharp.Sharp.Shared" Version="2.1.132" ExcludeAssets="runtime" />
     <!-- AdminManager Shared API via NuGet; ExcludeAssets="runtime" → server already ships this DLL. -->
     <PackageReference Include="ModSharp.Sharp.Modules.AdminManager.Shared" Version="2.1.132" ExcludeAssets="runtime" />
+    <!-- LocalizerManager Shared API via NuGet; ExcludeAssets="runtime" - server already ships this DLL. -->
+    <PackageReference Include="ModSharp.Sharp.Modules.LocalizerManager.Shared" Version="2.1.132" ExcludeAssets="runtime" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,17 @@
+{
+  "Beacon_Usage": {
+    "en-US": "{{default}}Usage: {{green}}beacon <name or @target>"
+  },
+  "Beacon_TargetsEmpty": {
+    "en-US": "{{red}}Could not find any targets."
+  },
+  "Beacon_MultipleTargets": {
+    "en-US": "{{red}}Found multiple targets, be more specific."
+  },
+  "Beacon_NoPermission": {
+    "en-US": "{{red}}You don't have permission to use this command."
+  },
+  "Beacon_Toggled": {
+    "en-US": "{{green}}Beacon {{default}}toggled on {{green}}{0}{{default}}."
+  }
+}
