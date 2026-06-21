@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>CS2Beacons</AssemblyName>
+    <RootNamespace>CS2Beacons</RootNamespace>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,44 @@
+<Project>
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>yappersHQ</Authors>
+    <Version>1.0.0</Version>
+    <Copyright>© 2026 yappersHQ</Copyright>
+
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <!-- Module output → ../.build/modules/<ProjectName>/ (matches modsharp-deploy expectations) -->
+  <PropertyGroup>
+    <OutputPath>$(MSBuildThisFileDirectory).build\modules\$(MSBuildProjectName)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="obj\**" />
+    <EmbeddedResource Remove="obj\**" />
+    <None Remove="obj\**" />
+  </ItemGroup>
+
+  <!-- ModSharp API surface (compile-time only — runtime is provided by the server) -->
+  <ItemGroup>
+    <PackageReference Include="ModSharp.Sharp.Shared" Version="2.1.132" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <!-- AdminManager Shared API. Private=false → NOT copied to build output; the
+       server already ships this DLL. We only need it to compile against. -->
+  <ItemGroup>
+    <Reference Include="Sharp.Modules.AdminManager.Shared" Private="false">
+      <HintPath>$(MSBuildThisFileDirectory)refs\Sharp.Modules.AdminManager.Shared.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
